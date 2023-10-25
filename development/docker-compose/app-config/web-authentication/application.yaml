@@ -1,0 +1,56 @@
+backbase:
+
+  authenticators:
+
+    channels:
+
+      sms: true
+
+      email: false
+
+      pushdevice: trueuser-manager
+    otp:
+
+      fromEmail: smofin@smartosc.com
+
+      fromSms: 0983024584
+
+      latencyPeriodSeconds: 300000
+
+  contentservices:
+
+    messagePriority: 7
+
+    otpPlaceholder: otp
+
+    title:
+
+      objectPath: /identity/push-notifications/web-auth-otp-title
+
+      repositoryId: resourceRepository
+
+    body:
+
+      objectPath: /identity/push-notifications/web-auth-otp-body
+
+      repositoryId: resourceRepository
+
+  pushnotification:
+
+    pushToAppName: app
+
+    authCodePlaceHolder: authCode
+
+    pushPriority: 7
+
+    pushTitleConfig:
+
+      objectPath: /identity/push-notifications/web-auth-oob-title
+
+      repositoryId: resourceRepository
+
+    pushBodyConfig:
+
+      objectPath: /identity/push-notifications/web-auth-oob-body
+
+      repositoryId: resourceRepository

@@ -1,0 +1,43 @@
+locking-request:
+  limitFailedCount: 3
+  expiredLockMinutes: 1
+
+backbase:
+  security:
+    public:
+      paths: "/client-api/v1/users/request-username,/client-api/v1/users/reset-password-resquest,/client-api/v1/otps,/client-api/v1/otps/{otp-id}/resend,/client-api/v1/users/submit-reset-password,/client-api/v1/users/reset-password/upload-image"
+  users:
+    identity-endpoints-enabled: true
+    identity-integration-enabled: true
+    attribute-whitelist:
+      - customerId
+      - mobileNumber
+      - identityNumber
+      - cif
+  api:
+    extensions:
+      classes:
+        com.backbase.dbs.user.manager.models.v2.User: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.UserExternal: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.GetIdentity: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.UpdateIdentityRequest: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.CreateIdentityRequest: extra-info-data
+        com.backbase.dbs.user.manager.domain.UserEntity: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.ReplaceUserProfileAttributes*: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.GetOwnUser: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.GetUser: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.BatchUser: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.BatchResponseItem: extra-info-data
+        com.backbase.dbs.user.manager.models.v2.IngestionBatchUser: extra-info-data
+      property-sets:
+        extra-info-data:
+          properties:
+            - property-name: cif
+              type: string
+            - property-name: identityNumber
+              type: string
+  communication:
+    services:
+      user:
+        profile:
+          service-id: "user-outbound-integration-service"
