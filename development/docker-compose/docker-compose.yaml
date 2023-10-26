@@ -19,6 +19,7 @@ x-common-variables: &common-variables
   management.security.roles: ANONYMOUS,ACTUATOR,USER
   spring.main.banner-mode: off
   spring.zipkin.enabled: false
+  spring.profiles: live
   spring.cloud.config.enabled: false
   spring.cloud.kubernetes.enabled: false
   backbase.audit.enabled: false
@@ -145,6 +146,10 @@ services:
       - '8180:8080'
     environment:
       QUARKUS_HTTP_CORS: "false"
+      #QUARKUS_HTTP_CORS: "true"
+      #QUARKUS_HTTP_CORS_EXPOSED_HEADERS: Location
+      #QUARKUS_HTTP_CORS_ORIGINS: http://localhost:9191,http://localhost:7777,http://remote-config-web-app:8080,http://edge:8080,http://localhost:4200,http://192.168.20.201:4200,http://192.168.20.201:7777,http://localhost:4300
+      #QUARKUS_HTTP_CORS_METHODS: GET,POST,OPTIONS
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
       KC_DB_URL: "jdbc:mysql://mysql:3306/backbase_identity?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true"
@@ -157,12 +162,13 @@ services:
       KC_SPI_USER_MANAGER_CLIENT_DEFAULT_URL: "http://user-manager:8080"
       KC_SPI_CONNECTIONS_JPA_LEGACY_INITIALIZE_EMPTY: "true"
       KC_SPI_CONNECTIONS_JPA_LEGACY_MIGRATION_STRATEGY: "update"
-
+      #keycloak.backbase.web-authentication.url : http://web-authentication:9971
       KEYCLOAK_BACKBASE_EVENT_LISTENERS_AUDIT_INTEGRATIONSERVICEURL: "http://audit-service:8500/"
       KEYCLOAK_BACKBASE_DEVICE_URL: "http://device-management-service:8182/"
       KEYCLOAK_BACKBASE_FIDO_URL: "http://fido-service:8183/"
       keycloak.backbase.web-authentication.url: http://web-authentication:9971
-
+      BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_0_ISSUERHOST: localhost
+      BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_1_ISSUERHOST: 10.0.3.105
       JAVA_TOOL_OPTIONS: "-Dquarkus.log.category.'\"com.backbase\"'.level=DEBUG \
                           -Dquarkus.log.category.'\"org.keycloak.protocol.oidc\"'.level=TRACE"
     volumes:
@@ -173,6 +179,38 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+  content-services:
+    container_name: content-services
+    image: repo.backbase.com/backbase-docker-releases/contentservices:${BB_VERSION}
+    ports:
+      - "8501:8501"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/content-services?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      contentservices.filesystem.import-location: ./import # Originially was '${BACKBASE_HOME}/contentservices/import'
+      contentservices.filesystem.export-location: ./export # Originially was '${BACKBASE_HOME}/contentservices/export'
+      contentservices.extension-points.enabled: true
+      contentservices.auditing.enabled: true
+      contentservices.provisioning.enabled: true
+      space-controller.enabled: true
+      space-controller.datasource.strategy: SWITCH_DATASOURCE
+      space-controller.space-filter.should-not-filter-paths: actuator/**
+      space-controller.spaces[0].id: draft
+      space-controller.spaces[0].datasource: << *database-variables
+      space-controller.spaces[0].datasource.type: com.zaxxer.hikari.HikariDataSource
+      space-controller.spaces[1].id: final
+      space-controller.spaces[1].datasource: << *database-variables
+      space-controller.spaces[1].datasource.type: com.zaxxer.hikari.HikariDataSource
+      server.port: 8501
+      spring.liquibase.enabled: false
+      backbase.security.public.paths: /**
+      eureka.instance.prefer-ip-address: false
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/contentservices", "<status>UP</status>" ]
 
   access-control:
     image: repo.backbase.com/backbase-docker-releases/access-control:${BB_VERSION}
@@ -194,6 +232,37 @@ services:
     links:
       - activemq
       - registry
+      -
+  push-integration-service:
+    container_name: push-integration-service
+    image: repo.backbase.com/backbase-docker-releases/push-integration-service:${BB_VERSION}
+    ports:
+      - "8503:8503"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/push-integration-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      backbase.web.security.enabled: true
+      backbase.mobile.ios.isProduction: false
+      backbase.mobile.ios.topic: "com.backbase.poc.pushnotifications"
+      backbase.mobile.android.url: "https://fcm.googleapis.com/fcm/send"
+      backbase.mobile.android.key: "License key should be here"
+      server.port: 8503
+
+  audit-service:
+    container_name: audit-service
+    image: repo.backbase.com/backbase-docker-releases/audit-service:${BB_VERSION}
+    ports:
+      - "8500:8500"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/audit-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      spring.cache.caffeine.spec: expireAfterWrite=10s
+      server.port: 8500
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/audit-service", "<status>UP</status>" ]
 
   arrangement-manager:
     image: repo.backbase.com/backbase-docker-releases/arrangement-manager:${BB_VERSION}
