@@ -144,6 +144,7 @@ services:
     ports:
       - '8180:8080'
     environment:
+      QUARKUS_HTTP_CORS: "false"
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
       KC_DB_URL: "jdbc:mysql://mysql:3306/backbase_identity?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true"
@@ -524,6 +525,22 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
+#  retail-web-app:
+#    profiles:
+#      - web
+#    image: repo.backbase.com/backbase-docker-releases/
+#    ports:
+#      - "4300:4300"
+#    environment:
+#      <<: [ *common-variables]
+#      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
+#      PORT: 4300
+#      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+#      API_ROOT: http://localhost:7777/api/
+#      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+#      AUTH_URL: http://localhost:8180/auth/
+#      AUTH_REALM: backbase
+
   emp-web-app:
     profiles:
       - web
@@ -535,23 +552,7 @@ services:
       # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
       PORT: 4200
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://edge:7777/api
+      API_ROOT: http://localhost:7777/api/
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://backbase-identity:8180/auth/
-      AUTH_REALM: backbase
-
-  retail-web-app:
-    profiles:
-      - web
-    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
-    ports:
-      - "4300:4300"
-    environment:
-      <<: [ *common-variables]
-      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
-      PORT: 4300
-      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://edge:7777/api/
-      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://backbase-identity:8180/auth/
+      AUTH_URL: http://localhost:8180/auth/
       AUTH_REALM: backbase
