@@ -524,21 +524,21 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
-#  retail-web-app:
-#    profiles:
-#      - web
-#    image: repo.backbase.com/backbase-docker-releases/
-#    ports:
-#      - "4300:4300"
-#    environment:
-#      <<: [ *common-variables]
-#      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
-#      PORT: 4300
-#      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-#      API_ROOT: http://localhost:7777/api/
-#      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-#      AUTH_URL: http://localhost:8180/auth/
-#      AUTH_REALM: backbase
+  retail-web-app:
+    profiles:
+      - web
+    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
+    ports:
+      - "4300:4300"
+    environment:
+      <<: [ *common-variables]
+      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
+      PORT: 4300
+      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+      API_ROOT: http://localhost:7777/api/
+      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+      AUTH_URL: http://localhost:8180/auth/
+      AUTH_REALM: backbase
 
   emp-web-app:
     profiles:
