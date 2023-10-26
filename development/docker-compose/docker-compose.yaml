@@ -538,7 +538,7 @@ services:
       API_ROOT: http://edge:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
       AUTH_URL: http://backbase-identity:8180/auth/
-      AUTH_REALM: employee
+      AUTH_REALM: backbase
 
   retail-web-app:
     profiles:
