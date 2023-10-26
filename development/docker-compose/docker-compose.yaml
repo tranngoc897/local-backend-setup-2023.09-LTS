@@ -327,7 +327,6 @@ services:
       JAVA_TOOL_OPTIONS: '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007'
     volumes:
       - ./scripts:/tmp/h
-      - ./app-config/limit/application.yaml:/tmp/application.yaml
     healthcheck:
       <<: *healthcheck-defaults
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/limit-service", "<status>UP</status>" ]
