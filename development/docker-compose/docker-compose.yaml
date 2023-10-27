@@ -19,7 +19,6 @@ x-common-variables: &common-variables
   management.security.roles: ANONYMOUS,ACTUATOR,USER
   spring.main.banner-mode: off
   spring.zipkin.enabled: false
-  spring.profiles: live
   spring.cloud.config.enabled: false
   spring.cloud.kubernetes.enabled: false
   backbase.audit.enabled: false
@@ -179,7 +178,6 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-
   content-services:
     container_name: content-services
     image: repo.backbase.com/backbase-docker-releases/contentservices:${BB_VERSION}
@@ -232,7 +230,6 @@ services:
     links:
       - activemq
       - registry
-      -
   push-integration-service:
     container_name: push-integration-service
     image: repo.backbase.com/backbase-docker-releases/push-integration-service:${BB_VERSION}
@@ -593,21 +590,21 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
-  retail-web-app:
-    profiles:
-      - web
-    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
-    ports:
-      - "4300:4300"
-    environment:
-      <<: [ *common-variables]
-      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
-      PORT: 4300
-      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://localhost:7777/api/
-      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth/
-      AUTH_REALM: backbase
+#  retail-web-app:
+#    profiles:
+#      - web
+#    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
+#    ports:
+#      - "4300:4300"
+#    environment:
+#      <<: [ *common-variables]
+#      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
+#      PORT: 4300
+#      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+#      API_ROOT: http://localhost:7777/api/
+#      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+#      AUTH_URL: http://localhost:8180/auth/
+#      AUTH_REALM: backbase
 
   emp-web-app:
     profiles:
