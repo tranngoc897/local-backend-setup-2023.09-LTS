@@ -126,6 +126,13 @@ services:
       backbase.oidc-token-converter.whitelistedDomains[0].internalHostScheme: http
       backbase.oidc-token-converter.whitelistedDomains[0].internalHost: backbase-identity:8080
       backbase.oidc-token-converter.whitelistedDomains[0].issuerHost: localhost
+      backbase.oidc-token-converter.whitelistedDomains[0].allowedIssuers:  http://localhost:8180/auth/realms/backbase
+
+      backbase.oidc-token-converter.whitelistedDomains[1].internalHostScheme: http
+      backbase.oidc-token-converter.whitelistedDomains[1].internalHost: backbase-identity:8080
+      backbase.oidc-token-converter.whitelistedDomains[1].issuerHost: 10.0.3.105
+      backbase.oidc-token-converter.whitelistedDomains[1].allowedIssuers: http://10.0.3.105:8180/auth/realms/backbase
+
     volumes:
       - ./scripts:/tmp/h
     healthcheck:
@@ -161,7 +168,6 @@ services:
       KC_SPI_USER_MANAGER_CLIENT_DEFAULT_URL: "http://user-manager:8080"
       KC_SPI_CONNECTIONS_JPA_LEGACY_INITIALIZE_EMPTY: "true"
       KC_SPI_CONNECTIONS_JPA_LEGACY_MIGRATION_STRATEGY: "update"
-      #keycloak.backbase.web-authentication.url : http://web-authentication:9971
       KEYCLOAK_BACKBASE_EVENT_LISTENERS_AUDIT_INTEGRATIONSERVICEURL: "http://audit-service:8500/"
       KEYCLOAK_BACKBASE_DEVICE_URL: "http://device-management-service:8182/"
       KEYCLOAK_BACKBASE_FIDO_URL: "http://fido-service:8183/"
@@ -537,9 +543,71 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
+  user-profile-manager:
+    container_name: user-profile-manager
+    image: repo.backbase.com/backbase-docker-releases/user-profile-manager:${BB_VERSION}
+    ports:
+      - "8061:8061"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/user-profile-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      scim.client.resource-type: Users
+      scim.client.service-uri: "http://user-profile-core-mock:8062"
+      server.port: 8061
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/user-profile-manager", "<status>UP</status>" ]
 
-  employee-service:
-    container_name: employee-service
+
+  user-profile-core-mock:
+    container_name: user-profile-core-mock
+    image: repo.backbase.com/backbase-docker-releases/user-profile-core-mock:${BB_VERSION}
+    ports:
+      - "8062:8062"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      scim.server-config.authentication-schemes:
+      scim.resource-types.user.name: User
+      scim.resource-types.user.endpoint: /Users
+      scim.resource-types.user.schema: "urn:ietf:params:scim:schemas:core:2.0:User"
+      scim.resource-types.user.schemaExtensions[0].schema: "urn:ietf:params:scim:schemas:extension:backbase:2.0:User"
+      scim.resource-types.user.schemaExtensions[0].required: false
+      scim.resource-types.user.schemaExtensions[1].schema: "urn:ietf:params:scim:schemas:extension:backbase:2.0:ExtendedUser"
+      scim.resource-types.user.schemaExtensions[1].required: false
+      backbase.security.public.paths: /**
+      server.port: 8062
+      backbase.activemq.enabled: true
+      SPRING_AUTOCONFIGURE_EXCLUDE: "org.springframework.cloud.function.context.config.ContextFunctionCatalogAutoConfiguration,com.backbase.buildingblocks.backend.communication.event.config.SpringCloudStreamEventingAutoConfiguration"
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/user-profile-core-mock", "<status>UP</status>" ]
+
+
+  #  user-outbound-integration-service:
+  #    container_name: user-outbound-integration-service
+  #    profiles:
+  #      - iam
+  #      - access-control
+  #      - ocb
+  #    image: 459208928199.dkr.ecr.us-west-2.amazonaws.com/development/user-outbound-integration-service:1.0.0-SNAPSHOT
+  #    ports:
+  #      - "8044:8044"
+  #    environment:
+  #      <<: [ *common-variables, *message-broker-variables ]
+  #      server.port: 8044
+  #
+  #    volumes:
+  #      - ./scripts:/tmp/h
+  #    healthcheck:
+  #      <<: *healthcheck-defaults
+  #      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/user-outbound-integration-service", "<status>UP</status>" ]
+
+  employee:
+    container_name: employee
     image: repo.backbase.com/backbase-docker-releases/employee:${BB_VERSION}
     ports:
       - "8340:8340"
@@ -573,7 +641,6 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
-
   web-authentication:
     container_name: web-authentication-service
     profiles:
@@ -590,25 +657,27 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
-  retail-web-app:
-    profiles:
-      - web
-    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
-    ports:
-      - "4300:4300"
-    environment:
-      <<: [ *common-variables]
-      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
-      PORT: 4300
-      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://localhost:7777/api/
-      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth/
-      AUTH_REALM: backbase
-
+#  retail-web-app:
+#    profiles:
+#      - web
+#    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
+#    ports:
+#      - "4300:4300"
+#    environment:
+#      <<: [ *common-variables]
+#      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
+#      PORT: 4300
+#      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+#      API_ROOT: http://localhost:7777/api
+#      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+#      AUTH_URL: http://localhost:8180/auth
+#      AUTH_REALM: backbase
+#      AUTH_SCOPE: openid
+#      AUTH_CLIENT_ID: bb-web-client
+#      FALLBACK_LOCALE: en
+#      BASE_HREF: /
+#
   emp-web-app:
-    profiles:
-      - web
     image: repo.backbase.com/docker-releases/employee-app:2023.02-LTS-no-production
     ports:
       - "4200:4200"
@@ -617,7 +686,365 @@ services:
       # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
       PORT: 4200
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://localhost:7777/api/
+      API_ROOT: http://localhost:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth/
+      AUTH_URL: http://localhost:8180/auth
       AUTH_REALM: backbase
+
+  account-statement:
+    container_name: account-statement
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/account-statement:${BB_VERSION}
+    ports:
+      - "8310:8310"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8310
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/account-statement", "<status>UP</status>" ]
+
+  account-statement-integration-mock:
+    container_name: account-statement-integration-mock
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/account-statement-integration-mock:${BB_VERSION}
+    ports:
+      - "8311:8311"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8311
+      spring.datasource.driver-class-name: 'org.h2.Driver'
+      spring.datasource.username: 'sa'
+      spring.datasource.password: 'password'
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/account-statement-integration-mock", "<status>UP</status>" ]
+
+  billpay-integrator:
+    container_name: billpay-integrator
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/billpay-integrator:${BB_VERSION}
+    ports:
+      - "8330:8330"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8330
+      spring.datasource.url: jdbc:mysql://mysql:3306/billpay-integrator?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/billpay-integrator", "<status>UP</status>" ]
+
+  contact-manager:
+    container_name: contact-manager
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/contact-manager:${BB_VERSION}
+    ports:
+      - "8331:8331"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/contact-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      # Contact Extensions Example
+      backbase.api.extensions.classes.com.backbase.presentation.contact.rest.spec.v2.contacts.ContactsPostRequestBody: pokemon-data
+      backbase.api.extensions.classes.com.backbase.presentation.contact.rest.spec.v2.contacts.ContactPutRequestBody: pokemon-data
+      backbase.api.extensions.classes.com.backbase.presentation.contact.rest.spec.v2.contacts.AccountInformation: pokemon-data
+      # Persistence spec
+      backbase.api.extensions.classes.com.backbase.dbs.party.persistence.spec.v2.parties.PartyDto: pokemon-data
+      backbase.api.extensions.classes.com.backbase.dbs.party.persistence.spec.v2.parties.AccountInformation: pokemon-data
+      # Persistence entities
+      backbase.api.extensions.classes.com.backbase.dbs.contactmanager.party.persistence.Party: pokemon-data
+      backbase.api.extensions.classes.com.backbase.dbs.contactmanager.party.persistence.AccountInformation: pokemon-data
+
+      backbase.api.extensions.property-sets.pokemon-data.properties[0].property-name: favPokemon
+      backbase.api.extensions.property-sets.pokemon-data.properties[0].security[0]: confidential
+      backbase.api.extensions.property-sets.pokemon-data.properties[0].type: string
+      backbase.api.extensions.property-sets.pokemon-data.properties[1].property-name: rank
+      backbase.api.extensions.property-sets.pokemon-data.properties[1].security[0]: confidential
+      backbase.api.extensions.property-sets.pokemon-data.properties[1].type: number
+      server.port: 8331
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/contact-manager", "<status>UP</status>" ]
+
+  messages-service:
+    container_name: messages-service
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/messages-service:${BB_VERSION}
+    ports:
+      - "8350:8350"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8350
+      spring.datasource.url: jdbc:mysql://mysql:3306/messages-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      messaging.password: password
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/messages-service", "<status>UP</status>" ]
+
+  payment-order-a2a:
+    container_name: payment-order-a2a
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/payment-order-a2a:${BB_VERSION}
+    ports:
+      - "8370:8370"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8370
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/payment-order-a2a", "<status>UP</status>" ]
+
+  payment-order-core-mock-service:
+    container_name: payment-order-core-mock-service
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/payment-order-core-mock-service:${BB_VERSION}
+    ports:
+      - "8371:8371"
+    environment:
+      <<: *common-variables
+      server.port: 8371
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/payment-order-core-mock-service", "<status>UP</status>" ]
+
+  payment-order-options:
+    container_name: payment-order-options
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/payment-order-options:${BB_VERSION}
+    ports:
+      - "8372:8372"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8372
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/payment-order-options", "<status>UP</status>" ]
+
+  payment-order-service:
+    container_name: payment-order-service
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/payment-order-service:${BB_VERSION}
+    ports:
+      - "8373:8373"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/payment-order-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8373
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/payment-order-service", "<status>UP</status>" ]
+
+
+  budget-planner:
+    container_name: budget-planner
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/budget-planner:${BB_VERSION}
+    ports:
+      - "8380:8380"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8380
+
+      spring.datasource.url: jdbc:mysql://mysql:3306/budget-planner?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/budget-planner", "<status>UP</status>" ]
+
+  pocket-tailor:
+    container_name: pocket-tailor
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/pocket-tailor:${BB_VERSION}
+    ports:
+      - "8381:8381"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8381
+      spring.datasource.url: jdbc:mysql://mysql:3306/pocket-tailor?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/pocket-tailor", "<status>UP</status>" ]
+
+  transaction-category-collector:
+    container_name: transaction-category-collector
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/transaction-category-collector:${BB_VERSION}
+    ports:
+      - "8382:8382"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8382
+      spring.datasource.url: jdbc:mysql://mysql:3306/transaction-category-collector?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      backbase.category.management.enabled: true
+      backbase.transaction.enrichment.provider: mock
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/transaction-category-collector", "<status>UP</status>" ]
+
+
+  account-mock:
+    container_name: account-mock
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/account-mock:${BB_VERSION}
+    ports:
+      - "8391:8391"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8391
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/account-mock", "<status>UP</status>" ]
+
+
+  remote-deposit-capturer:
+    container_name: remote-deposit-capturer
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/remote-deposit-capturer:${BB_VERSION}
+    ports:
+      - "8400:8400"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8400
+      backbase.rdc.rovider: mock
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-deposit-capturer", "<status>UP</status>" ]
+
+
+  transaction-enricher:
+    container_name: transaction-enricher
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/transaction-enricher:${BB_VERSION}
+    ports:
+      - "8410:8410"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/transaction-enricher?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      backbase.communication.services.category.management.service-id: transaction-category-collector
+      backbase.communication.services.category.management.service-url: /service-api/v2
+      backbase.transaction.enrichment.provider: mock
+      backbase.transaction.enrichment.mock.error-mode: false
+      server.port: 8410
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/transaction-enricher", "<status>UP</status>" ]
+
+  transaction-manager:
+    container_name: transaction-manager
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/transaction-manager:${BB_VERSION}
+    ports:
+      - "8411:8411"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8411
+
+      spring.datasource.url: jdbc:mysql://mysql:3306/transaction-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      backbase.enrichment.enabled: true
+      backbase.transaction.type: "ATM, ACH, Bill Payment, Cash, Credit/Debit Card, Check, Deposit, Fee, POS, Withdrawal"
+      backbase.transaction.enrichment.enabled: true
+      backbase.transactions.csv.export.date-format: "MM-dd-yyyy"
+      backbase.transactions.csv.export.fields: "BBAN,name,counterPartyAccountNumber,counterPartyName,currency,amount,creditDebitIndicator,bookingDate,type,typeGroup,reference,instructedCurrency,currencyExchangeRate,instructedAmount,description,category,checkSerialNumber"
+      backbase.transactions.csv.export.headers: "Account number(BBAN),Account name,Counter party account number,Counter party name,Currency,Amount,Credit/debit indicator,Book date,Transaction type,Transaction group,Transaction reference,Instructed currency,currency exchange rate,Instructed amount,Description,Category,Check number"
+      logging.level.org.hibernate.SQL: DEBUG
+      logging.level.org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+      logging.level.org.hibernate.type.descriptor.sql.BasicExtractor: TRACE
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/transaction-manager", "<status>UP</status>" ]
+
+  payveris:
+    container_name: payveris
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/payveris:${BB_VERSION}
+    ports:
+      - "8420:8420"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8420
+
+      spring.datasource.url: jdbc:mysql://mysql:3306/payveris?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      backbase.payveris.base-url: https://test-api.regrpayverisbp.com/api/services/
+      backbase.payveris.version: 7.29
+      backbase.payveris.client-code: pleaseAddHereYourClientCode
+      backbase.payveris.api-key: pleaseAddHereYourApiKey
+      backbase.payveris.sso.url: https://test.regrpayverisbp.com/pp/sso/eu/
+      backbase.payveris.user-code-mapper.type: outbound-integration
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/payveris", "<status>UP</status>" ]
+
+  payveris-p2p-integrator:
+    container_name: payveris-p2p-integrator
+    profiles:
+      - banking-services
+    image: repo.backbase.com/backbase-docker-releases/payveris-p2p-integrator:${BB_VERSION}
+    ports:
+      - "8421:8421"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8421
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/payveris-p2p-integrator", "<status>UP</status>" ]
+    depends_on:
+      mysql:
+        condition: service_healthy
