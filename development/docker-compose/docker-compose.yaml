@@ -679,6 +679,8 @@ services:
 #
   emp-web-app:
     image: repo.backbase.com/docker-releases/employee-app:2023.02-LTS-no-production
+    profiles:
+      - web
     ports:
       - "4200:4200"
     environment:
@@ -688,7 +690,7 @@ services:
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
       API_ROOT: http://localhost:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth
+      AUTH_URL: http://localhost:8180/auth/
       AUTH_REALM: backbase
 
   account-statement:
