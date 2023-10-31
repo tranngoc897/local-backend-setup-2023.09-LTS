@@ -720,7 +720,7 @@ services:
 
   communication:
     container_name: communications
-    image: repo.backbase.com/backbase-docker-releases/communication:{BB_VERSION}
+    image: repo.backbase.com/backbase-docker-releases/communication:${BB_VERSION}
     ports:
       - '9972:9972'
     environment:
