@@ -834,7 +834,7 @@ services:
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
       API_ROOT: http://localhost:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth/
+      AUTH_URL: http://localhost:8180/auth
       AUTH_REALM: backbase
 
   engage-web-app:
@@ -851,7 +851,7 @@ services:
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
       API_ROOT: http://localhost:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth/
+      AUTH_URL: http://localhost:8180/auth
       AUTH_REALM: backbase
       AUTH_CLIENT_ID: bb-web-client
 
@@ -869,7 +869,7 @@ services:
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
       API_ROOT: http://localhost:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth/
+      AUTH_URL: http://localhost:8180/auth
       AUTH_REALM: backbase
       AUTH_CLIENT_ID: bb-web-client
 
