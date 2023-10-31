@@ -220,6 +220,8 @@ services:
 
 
   personal-loans-service:
+    profiles:
+      - banking-services
     container_name: personal-loans-service
     image: repo.backbase.com/backbase-docker-releases/personal-loans-service/2023.09-LTS-digital-sales
     ports:
@@ -241,6 +243,8 @@ services:
 
 
   card-manager:
+    profiles:
+      - banking-services
     container_name: card-manager
     image: repo.backbase.com/backbase-docker-releases/card-manager:${BB_VERSION}
     ports:
@@ -254,6 +258,8 @@ services:
 
 
   enrollment-manager:
+    profiles:
+      - banking-services
     container_name: enrollment-manager
     image: repo.backbase.com/backbase-docker-releases/enrollment-manager:${BB_VERSION}
     ports:
@@ -266,6 +272,8 @@ services:
       - ./scripts:/tmp/h
 
   enrollment-support-service-mock:
+    profiles:
+      - banking-services
     container_name: enrollment-support-service-mock
     image: repo.backbase.com/backbase-docker-releases/enrollment-support-service-mock:${BB_VERSION}
     ports:
