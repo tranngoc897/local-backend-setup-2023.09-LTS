@@ -184,6 +184,98 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+  provisioning:
+    container_name: provisioning
+    image: repo.backbase.com/backbase-docker-releases/provisioning:${BB_VERSION}
+    ports:
+      - "8502:8502"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/provisioning?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      #spring.datasource.hikari.pool-name: content-services
+      server.port: 8502
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/provisioning", "<status>UP</status>" ]
+
+
+  remote-config:
+    container_name: remote-config
+    image: repo.backbase.com/backbase-docker-releases/remote-config:${BB_VERSION}
+    ports:
+      - "9995:8504"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8504
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
+
+
+  personal-loans-service:
+    container_name: personal-loans-service
+    image: repo.backbase.com/backbase-docker-releases/personal-loans-service/2023.09-LTS-digital-sales
+    ports:
+      - "9994:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/personal-loans-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
+
+
+#  backbase-docker-releases/engagement-event
+#  backbase-docker-releases/engagement-event-integration-mock
+#  backbase-docker-releases/engagements-data-retail
+
+
+  card-manager:
+    container_name: card-manager
+    image: repo.backbase.com/backbase-docker-releases/card-manager:${BB_VERSION}
+    ports:
+      - "9993:8504"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8504
+    volumes:
+      - ./scripts:/tmp/h
+
+
+  enrollment-manager:
+    container_name: enrollment-manager
+    image: repo.backbase.com/backbase-docker-releases/enrollment-manager:${BB_VERSION}
+    ports:
+      - "9992:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/enrollment-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+
+  enrollment-support-service-mock:
+    container_name: enrollment-support-service-mock
+    image: repo.backbase.com/backbase-docker-releases/enrollment-support-service-mock:${BB_VERSION}
+    ports:
+      - "9991:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+
   content-services:
     container_name: content-services
     image: repo.backbase.com/backbase-docker-releases/contentservices:${BB_VERSION}
@@ -632,7 +724,7 @@ services:
 
   communication:
     container_name: communications
-    image: repo.backbase.com/backbase-docker-releases/communication:2023.09-LTS
+    image: repo.backbase.com/backbase-docker-releases/communication:{BB_VERSION}
     ports:
       - '9972:9972'
     environment:
@@ -679,6 +771,7 @@ services:
 #
   emp-web-app:
     image: repo.backbase.com/docker-releases/employee-app:2023.02-LTS-no-production
+    #container_name: emp-web-app
     profiles:
       - web
     ports:
@@ -692,6 +785,42 @@ services:
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
       AUTH_URL: http://localhost:8180/auth/
       AUTH_REALM: backbase
+
+  engage-web-app:
+    image: repo.backbase.com/backbase-docker-releases/engage-web-app:{BB_VERSION}
+    container_name: engage-web-app
+    profiles:
+      - web
+    ports:
+      - "4400:8080"
+    environment:
+      <<: [ *common-variables]
+      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
+      PORT: 4400
+      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+      API_ROOT: http://localhost:7777/api
+      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+      AUTH_URL: http://localhost:8180/auth/
+      AUTH_REALM: backbase
+      AUTH_CLIENT_ID: bb-web-client
+
+  remote-config-web-app:
+    image: repo.backbase.com/backbase-docker-releases/remote-config-web-app:{BB_VERSION}
+    container_name: remote-config-web-app
+    profiles:
+      - web
+    ports:
+      - "4500:8080"
+    environment:
+      <<: [ *common-variables]
+      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
+      PORT: 4500
+      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+      API_ROOT: http://localhost:7777/api
+      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+      AUTH_URL: http://localhost:8180/auth/
+      AUTH_REALM: backbase
+      AUTH_CLIENT_ID: bb-web-client
 
   account-statement:
     container_name: account-statement
