@@ -782,7 +782,7 @@ services:
       AUTH_REALM: backbase
 
   engage-web-app:
-    image: repo.backbase.com/backbase-docker-releases/engage-web-app:{BB_VERSION}
+    image: repo.backbase.com/backbase-docker-releases/engage-web-app:2023.09-LTS
     container_name: engage-web-app
     profiles:
       - web
@@ -800,7 +800,7 @@ services:
       AUTH_CLIENT_ID: bb-web-client
 
   remote-config-web-app:
-    image: repo.backbase.com/backbase-docker-releases/remote-config-web-app:{BB_VERSION}
+    image: repo.backbase.com/backbase-docker-releases/remote-config-web-app:2023.09-LTS
     container_name: remote-config-web-app
     profiles:
       - web
