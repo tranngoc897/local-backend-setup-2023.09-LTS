@@ -841,7 +841,7 @@ services:
     image: repo.backbase.com/backbase-docker-releases/engage-web-app:2023.09-LTS
     container_name: engage-web-app
     profiles:
-      - web
+      - engagement
     ports:
       - "4400:4400"
     environment:
@@ -859,7 +859,7 @@ services:
     image: repo.backbase.com/backbase-docker-releases/remote-config-web-app:2023.09-LTS
     container_name: remote-config-web-app
     profiles:
-      - web
+      - engagement
     ports:
       - "4500:4500"
     environment:
