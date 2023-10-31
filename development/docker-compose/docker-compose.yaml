@@ -202,7 +202,6 @@ services:
       <<: *healthcheck-defaults
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/provisioning", "<status>UP</status>" ]
 
-
   remote-config:
     container_name: remote-config
     image: repo.backbase.com/backbase-docker-releases/remote-config:${BB_VERSION}
@@ -218,12 +217,11 @@ services:
       <<: *healthcheck-defaults
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
 
-
   personal-loans-service:
-    profiles:
-      - banking-services
     container_name: personal-loans-service
     image: repo.backbase.com/backbase-docker-releases/personal-loans-service/2023.09-LTS-digital-sales
+    profiles:
+      - banking-services
     ports:
       - "9994:8080"
     environment:
@@ -232,36 +230,26 @@ services:
       server.port: 8080
     volumes:
       - ./scripts:/tmp/h
-    healthcheck:
-      <<: *healthcheck-defaults
-      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
-
-
-#  backbase-docker-releases/engagement-event
-#  backbase-docker-releases/engagement-event-integration-mock
-#  backbase-docker-releases/engagements-data-retail
-
 
   card-manager:
-    profiles:
-      - banking-services
     container_name: card-manager
     image: repo.backbase.com/backbase-docker-releases/card-manager:${BB_VERSION}
+    profiles:
+      - banking-services
     ports:
       - "9993:8504"
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      spring.datasource.url: jdbc:mysql://mysql:3306/card-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
       server.port: 8504
     volumes:
       - ./scripts:/tmp/h
 
-
   enrollment-manager:
-    profiles:
-      - banking-services
     container_name: enrollment-manager
     image: repo.backbase.com/backbase-docker-releases/enrollment-manager:${BB_VERSION}
+    profiles:
+      - banking-services
     ports:
       - "9992:8080"
     environment:
@@ -321,7 +309,7 @@ services:
     ports:
       - "8040:8080"
     environment:
-      <<: [*common-variables, *message-broker-variables, *database-variables]
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
       spring.datasource.url: jdbc:mysql://mysql:3306/access-control?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
       LOGGING_LEVEL_COM_BACKBASE: DEBUG
       logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
@@ -372,7 +360,7 @@ services:
     ports:
       - "8050:8080"
     environment:
-      <<: [*common-variables, *message-broker-variables, *database-variables]
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
       spring.datasource.url: jdbc:mysql://mysql:3306/arrangement-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
     volumes:
       - ./scripts:/tmp/h
@@ -391,7 +379,7 @@ services:
     ports:
       - "8060:8080"
     environment:
-      <<: [*common-variables, *message-broker-variables, *database-variables]
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
       spring.datasource.url: jdbc:mysql://mysql:3306/user-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
       backbase.users.identity-endpoints-enabled: true
       backbase.users.identity-integration-enabled: true
@@ -560,8 +548,8 @@ services:
     command:
       run /etc/newman/postman_collection.json --environment="/etc/newman/postman_environment.json"
     volumes:
-      -  ../../test/postman/HealthCheck_Local-Backend-Environment.postman_collection.json:/etc/newman/postman_collection.json
-      -  ../../test/postman/Docker-Backend-Environment.postman_environment.json:/etc/newman/postman_environment.json
+      - ../../test/postman/HealthCheck_Local-Backend-Environment.postman_collection.json:/etc/newman/postman_collection.json
+      - ../../test/postman/Docker-Backend-Environment.postman_environment.json:/etc/newman/postman_environment.json
     depends_on:
       access-control:
         condition: service_healthy
@@ -749,7 +737,7 @@ services:
     ports:
       - '9971:9971'
     environment:
-      <<: [ *common-variables]
+      <<: [ *common-variables ]
       eureka.client.enabled: 'true'
       spring.datasource.url: jdbc:mysql://mysql:3306/web_authentication?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
       server.port: 9971
@@ -757,26 +745,26 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
-#  retail-web-app:
-#    profiles:
-#      - web
-#    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
-#    ports:
-#      - "4300:4300"
-#    environment:
-#      <<: [ *common-variables]
-#      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
-#      PORT: 4300
-#      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-#      API_ROOT: http://localhost:7777/api
-#      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-#      AUTH_URL: http://localhost:8180/auth
-#      AUTH_REALM: backbase
-#      AUTH_SCOPE: openid
-#      AUTH_CLIENT_ID: bb-web-client
-#      FALLBACK_LOCALE: en
-#      BASE_HREF: /
-#
+  #  retail-web-app:
+  #    profiles:
+  #      - web
+  #    image: repo.backbase.com/backbase-docker-releases/retail-usa:2022.03.1
+  #    ports:
+  #      - "4300:4300"
+  #    environment:
+  #      <<: [ *common-variables]
+  #      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access http://edge:8080/eureka
+  #      PORT: 4300
+  #      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+  #      API_ROOT: http://localhost:7777/api
+  #      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+  #      AUTH_URL: http://localhost:8180/auth
+  #      AUTH_REALM: backbase
+  #      AUTH_SCOPE: openid
+  #      AUTH_CLIENT_ID: bb-web-client
+  #      FALLBACK_LOCALE: en
+  #      BASE_HREF: /
+  #
   emp-web-app:
     image: repo.backbase.com/docker-releases/employee-app:2023.02-LTS-no-production
     #container_name: emp-web-app
@@ -785,7 +773,7 @@ services:
     ports:
       - "4200:4200"
     environment:
-      <<: [ *common-variables]
+      <<: [ *common-variables ]
       # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
       PORT: 4200
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
@@ -802,7 +790,7 @@ services:
     ports:
       - "4400:8080"
     environment:
-      <<: [ *common-variables]
+      <<: [ *common-variables ]
       # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
       PORT: 4400
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
@@ -820,7 +808,7 @@ services:
     ports:
       - "4500:8080"
     environment:
-      <<: [ *common-variables]
+      <<: [ *common-variables ]
       # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
       PORT: 4500
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
