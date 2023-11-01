@@ -341,6 +341,7 @@ services:
       <<: [ *common-variables, *message-broker-variables, *integration-service-variables ]
       server.port: 8041
       backbase.security.public.paths: /**
+      backbase.data-group.types: "ARRANGEMENTS,CONTACTS,CUSTOMERS,REPOSITORIES"
     volumes:
       - ./scripts:/tmp/h
     healthcheck:
@@ -374,14 +375,13 @@ services:
       server.port: 8501
       spring.liquibase.enabled: false
       backbase.security.public.paths: /**
+      # backbase.whitelist.allowedContentTypes: image/jpeg,image/pjpeg,image/gif,image/png,image/svg+xml,application/pdf,application/json,application/zip,application/rtf,text/plain,application/octet-stream,text/html
       eureka.instance.prefer-ip-address: false
     volumes:
       - ./scripts:/tmp/h
     healthcheck:
       <<: *healthcheck-defaults
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/contentservices", "<status>UP</status>" ]
-#    whitelist:
-#      allowedContentTypes: image/jpeg,image/pjpeg,image/gif,image/png,image/svg+xml,application/pdf,application/json,application/zip,application/rtf,text/plain,application/octet-stream,text/html
 
   user-segment:
     container_name: user-segment
