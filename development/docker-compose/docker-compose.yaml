@@ -611,7 +611,7 @@ services:
 
   limit:
     container_name: limit-service
-    image: repo.backbase.com/backbase-docker-releases/limit:${BB_VERSION}
+    image: repo.backbase.com/backbase-docker-releases/limit:2023.09-LTS
     ports:
       - "8506:8506"
       - "5007:5007"
@@ -851,6 +851,19 @@ services:
     environment:
       <<: [ *common-variables, *message-broker-variables ]
       server.port: 8340
+    profiles:
+      - iam
+    volumes:
+      - ./scripts:/tmp/h
+
+  employee-actions:
+    container_name: employee-actions
+    image: repo.backbase.com/backbase-docker-releases/employee-actions:2023.09-LTS
+    ports:
+      - "8341:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables ]
+      server.port: 8080
     profiles:
       - iam
     volumes:
