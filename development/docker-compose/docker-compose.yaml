@@ -52,7 +52,7 @@ x-integration-service-variables: &integration-service-variables
 
 x-provisioner-variables: &provisioner-variables
   TARGET_URL: http://localhost:7777/api/provisioning
-  AUTH_URL: http://localhost:8180/auth/auth/login
+  AUTH_URL: http://localhost:8180/auth/login
   IMPORT_USERNAME: admin
   IMPORT_PASSWORD: admin
   FOLDERS_TO_SCAN: init,upgrade
@@ -235,7 +235,7 @@ services:
   provisioner:
     image: repo.backbase.com/backbase-docker-releases/provisioner:2023.09-LTS
     volumes:
-      - 'content-volume:/home/backbase/content'
+      - ./scripts:/tmp/h
     environment:
       <<: *provisioner-variables
       spring.datasource.url: jdbc:mysql://mysql:3306/provisioner?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
@@ -249,7 +249,8 @@ services:
   engage-defaults:
     image: repo.backbase.com/backbase-docker-releases/engage-defaults-retail:2022.10-BETA
     volumes:
-      - 'content-volume:/home/backbase/content'
+ #     - 'content-volume:/home/backbase/content'
+      - ./scripts:/tmp/h
     profiles:
       - engagement
     environment:
@@ -850,6 +851,8 @@ services:
     environment:
       <<: [ *common-variables, *message-broker-variables ]
       server.port: 8340
+    profiles:
+      - iam
     volumes:
       - ./scripts:/tmp/h
 
