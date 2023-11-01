@@ -240,6 +240,8 @@ services:
       <<: *provisioner-variables
       spring.datasource.url: jdbc:mysql://mysql:3306/provisioner?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
     network_mode: "host"
+    profiles:
+      - engagement
     depends_on:
       engage-defaults:
         condition: service_completed_successfully
@@ -248,27 +250,29 @@ services:
     image: repo.backbase.com/backbase-docker-releases/engage-defaults-retail:2022.10-BETA
     volumes:
       - 'content-volume:/home/backbase/content'
+    profiles:
+      - engagement
     environment:
       <<: *provisioner-variables
       spring.datasource.url: jdbc:mysql://mysql:3306/engage_defaults?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
     network_mode: "host"
 
-  remote-config:
-    container_name: remote-config
-    image: repo.backbase.com/backbase-docker-releases/remote-config:${BB_VERSION}
-    profiles:
-      - ext
-    ports:
-      - "9995:8080"
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-      server.port: 8080
-    volumes:
-      - ./scripts:/tmp/h
-    healthcheck:
-      <<: *healthcheck-defaults
-      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
+#  remote-config:
+#    container_name: remote-config
+#    image: repo.backbase.com/backbase-docker-releases/remote-config:${BB_VERSION}
+#    profiles:
+#      - ext
+#    ports:
+#      - "9995:8080"
+#    environment:
+#      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+#      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+#      server.port: 8080
+#    volumes:
+#      - ./scripts:/tmp/h
+#    healthcheck:
+#      <<: *healthcheck-defaults
+#      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
 
   personal-loans-service:
     container_name: personal-loans-service
@@ -396,7 +400,7 @@ services:
     ports:
       - "9912:8080"
     profiles:
-      - ext
+      - engagement
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
       server.port: 8080
