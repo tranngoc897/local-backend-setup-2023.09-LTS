@@ -219,7 +219,7 @@ services:
     ports:
       - "8502:8080"
     profiles:
-      - ext
+      - engagement
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
       spring.datasource.url: jdbc:mysql://mysql:3306/provisioning?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
@@ -354,7 +354,7 @@ services:
     ports:
       - "8501:8501"
     profiles:
-      - ext
+      - engagement
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
       spring.datasource.url: jdbc:mysql://mysql:3306/content-services?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
@@ -413,7 +413,7 @@ services:
     ports:
       - "9913:8080"
     profiles:
-      - ext
+      - engagement
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
       server.port: 8080
