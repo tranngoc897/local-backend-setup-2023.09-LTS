@@ -682,6 +682,8 @@ services:
   postman-health-check:
     image: postman/newman
     platform: linux/amd64
+    profiles:
+      - foundation
     command:
       run /etc/newman/postman_collection.json --environment="/etc/newman/postman_environment.json"
     volumes:
