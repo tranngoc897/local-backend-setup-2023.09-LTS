@@ -277,7 +277,7 @@ services:
 
   personal-loans-service:
     container_name: personal-loans-service
-    image: repo.backbase.com/backbase-docker-releases/personal-loans-service/2023.09-LTS-digital-sales
+    image: repo.backbase.com/backbase-docker-releases/personal-loans-service:2023.09-LTS-digital-sales
     profiles:
       - banking-services
     ports:
