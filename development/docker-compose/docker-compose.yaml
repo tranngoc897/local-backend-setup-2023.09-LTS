@@ -1,5 +1,4 @@
 # https://docs.docker.com/compose/compose-file/
-
 x-common-variables: &common-variables
   JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60.0
   SIG_SECRET_KEY: JWTSecretKeyDontUseInProduction!
@@ -22,7 +21,7 @@ x-common-variables: &common-variables
   spring.cloud.config.enabled: false
   spring.cloud.kubernetes.enabled: false
   backbase.audit.enabled: false
-  backbase.security.public.paths: /integration-api/**
+  backbase.security.public.paths: /integration-api/**,/service-api/**
   backbase.security.mtls.enabled: false
   backbase.http.request-logging-filter.max-payload-length: 5000
   logging.level.com.backbase: DEBUG
@@ -50,20 +49,6 @@ x-healthcheck-defaults: &healthcheck-defaults
 x-integration-service-variables: &integration-service-variables
   backbase.security.public.paths: /**
 
-x-provisioner-variables: &provisioner-variables
-  TARGET_URL: http://localhost:7777/api/provisioning
-  AUTH_URL: http://localhost:8180/auth/login
-  IMPORT_USERNAME: admin
-  IMPORT_PASSWORD: admin
-  FOLDERS_TO_SCAN: init,upgrade
-  FAIL_FAST: 'false'
-  PROVISION_WITH_IDENTITY: 'false'
-
-# API_ROOT: http://localhost:7777/api
-# Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-# AUTH_URL: http://localhost:8180/auth
-# AUTH_REALM: backbase
-# AUTH_CLIENT_ID: bb-web-client
 
 name: backbase
 
@@ -180,10 +165,6 @@ services:
       - '8180:8080'
     environment:
       QUARKUS_HTTP_CORS: "false"
-      #QUARKUS_HTTP_CORS: "true"
-      #QUARKUS_HTTP_CORS_EXPOSED_HEADERS: Location
-      #QUARKUS_HTTP_CORS_ORIGINS: http://localhost:9191,http://localhost:7777,http://remote-config-web-app:8080,http://edge:8080,http://localhost:4200,http://192.168.20.201:4200,http://192.168.20.201:7777,http://localhost:4300
-      #QUARKUS_HTTP_CORS_METHODS: GET,POST,OPTIONS
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
       KC_DB_URL: "jdbc:mysql://mysql:3306/backbase_identity?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true"
@@ -213,141 +194,6 @@ services:
       mysql:
         condition: service_healthy
 
-  provisioning:
-    container_name: provisioning
-    image: repo.backbase.com/backbase-docker-releases/provisioning:${BB_VERSION}
-    ports:
-      - "8502:8080"
-    profiles:
-      - engagement
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/provisioning?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-      #spring.datasource.hikari.pool-name: content-services
-      server.port: 8080
-
-    volumes:
-      - ./scripts:/tmp/h
-    healthcheck:
-      <<: *healthcheck-defaults
-      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/provisioning", "<status>UP</status>" ]
-
-  provisioner:
-    image: repo.backbase.com/backbase-docker-releases/provisioner:2023.09-LTS
-    volumes:
-      - ./scripts:/tmp/h
-    environment:
-      <<: *provisioner-variables
-      spring.datasource.url: jdbc:mysql://mysql:3306/provisioner?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-    network_mode: "host"
-    profiles:
-      - engagement
-    depends_on:
-      engage-defaults:
-        condition: service_completed_successfully
-
-  engage-defaults:
-    image: repo.backbase.com/backbase-docker-releases/engage-defaults-retail:2022.10-BETA
-    volumes:
- #     - 'content-volume:/home/backbase/content'
-      - ./scripts:/tmp/h
-    profiles:
-      - engagement
-    environment:
-      <<: *provisioner-variables
-      spring.datasource.url: jdbc:mysql://mysql:3306/engage_defaults?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-    network_mode: "host"
-
-#  remote-config:
-#    container_name: remote-config
-#    image: repo.backbase.com/backbase-docker-releases/remote-config:${BB_VERSION}
-#    profiles:
-#      - ext
-#    ports:
-#      - "9995:8080"
-#    environment:
-#      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-#      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-#      server.port: 8080
-#    volumes:
-#      - ./scripts:/tmp/h
-#    healthcheck:
-#      <<: *healthcheck-defaults
-#      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
-
-  personal-loans-service:
-    container_name: personal-loans-service
-    image: repo.backbase.com/backbase-docker-releases/personal-loans-service:2023.09-LTS-digital-sales
-    profiles:
-      - banking-services
-    ports:
-      - "9994:8080"
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/personal-loans-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-      server.port: 8080
-    volumes:
-      - ./scripts:/tmp/h
-
-  card-manager:
-    container_name: card-manager
-    image: repo.backbase.com/backbase-docker-releases/card-manager:${BB_VERSION}
-    profiles:
-      - banking-services
-    ports:
-      - "9993:8080"
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/card-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-      server.port: 8080
-    volumes:
-      - ./scripts:/tmp/h
-
-  enrollment-manager:
-    container_name: enrollment-manager
-    image: repo.backbase.com/backbase-docker-releases/enrollment-manager:${BB_VERSION}
-    profiles:
-      - banking-services
-    ports:
-      - "9992:8080"
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/enrollment-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-      server.port: 8080
-    volumes:
-      - ./scripts:/tmp/h
-
-  enrollment-support-service-mock:
-    profiles:
-      - banking-services
-    container_name: enrollment-support-service-mock
-    image: repo.backbase.com/backbase-docker-releases/enrollment-support-service-mock:${BB_VERSION}
-    ports:
-      - "9991:8080"
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      server.port: 8080
-    volumes:
-      - ./scripts:/tmp/h
-
-  accessgroup-integration-service:
-    container_name: accessgroup-integration-service
-    profiles:
-      - iam
-    image: repo.backbase.com/backbase-docker-releases/accessgroup-integration-service:${BB_VERSION}
-    ports:
-      - "8041:8041"
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *integration-service-variables ]
-      server.port: 8041
-      backbase.security.public.paths: /**
-      backbase.data-group.types: "ARRANGEMENTS,CONTACTS,CUSTOMERS,REPOSITORIES"
-    volumes:
-      - ./scripts:/tmp/h
-    healthcheck:
-      <<: *healthcheck-defaults
-      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/accessgroup-integration-service", "<status>UP</status>" ]
-
   content-services:
     container_name: content-services
     image: repo.backbase.com/backbase-docker-releases/contentservices:${BB_VERSION}
@@ -372,40 +218,19 @@ services:
       space-controller.spaces[1].id: final
       space-controller.spaces[1].datasource: << *database-variables
       space-controller.spaces[1].datasource.type: com.zaxxer.hikari.HikariDataSource
-      server.port: 8501
-      spring.liquibase.enabled: false
       backbase.security.public.paths: /**
-      # backbase.whitelist.allowedContentTypes: image/jpeg,image/pjpeg,image/gif,image/png,image/svg+xml,application/pdf,application/json,application/zip,application/rtf,text/plain,application/octet-stream,text/html
-      eureka.instance.prefer-ip-address: false
+      contentservices.whitelist.enabled=true:
+      contentservices.whitelist.allowedContentTypes: image/jpeg,image/pjpeg,image/gif,image/png,image/svg+xml,application/pdf,application/json,application/zip,application/rtf,text/plain,application/octet-stream,text/html
+      backbase.communication.services.pandp.accesscontrol.query.serviceId: access-control
+      backbase.communication.services.pandp.user.query.serviceId: user-manager
+      backbase.contentservices.accesscontrol.enabled: true
+      cache.enabled: false
+
     volumes:
       - ./scripts:/tmp/h
     healthcheck:
       <<: *healthcheck-defaults
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/contentservices", "<status>UP</status>" ]
-
-  user-segment:
-    container_name: user-segment
-    image: repo.backbase.com/backbase-docker-releases/user-segment:2023.09-LTS
-    ports:
-      - "9911:8080"
-    profiles:
-      - engagement
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      server.port: 8080
-      spring.datasource.url: jdbc:mysql://mysql:3306/user_segment?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-
-  user-segments-collector:
-    container_name: user-segments-collector
-    image: repo.backbase.com/backbase-docker-releases/user-segments-collector:2023.09-LTS
-    ports:
-      - "9912:8080"
-    profiles:
-      - engagement
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      server.port: 8080
-      spring.datasource.url: jdbc:mysql://mysql:3306/user_segment_collector?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
 
   content-enricher:
     container_name: content-enricher
@@ -417,6 +242,147 @@ services:
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
       server.port: 8080
+      spring.datasource.url: jdbc:mysql://mysql:3306/content_enricher?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+
+  engagement:
+    container_name: engagement
+    image: repo.backbase.com/backbase-docker-releases/engagement:${BB_VERSION}
+    ports:
+      - "8320:8320"
+    profiles:
+      - engagement
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8320
+      IS_APPROVALS: true
+      #Set up this: https://backbase.io/developers/documentation/digital-engage/2023.09-LTS/system-reference/engage-services-permissions/
+      spring.datasource.url: jdbc:mysql://mysql:3306/engagement?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+    volumes:
+      - ./scripts:/tmp/h
+
+  provisioning:
+    container_name: provisioning
+    image: repo.backbase.com/backbase-docker-releases/provisioning:${BB_VERSION}
+    ports:
+      - "8502:8080"
+    profiles:
+      - engagement-1
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/provisioning?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      spring.datasource.hikari.pool-name: content-services
+      server.port: 8080
+
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/provisioning", "<status>UP</status>" ]
+
+#  engage-defaults:
+#    image: repo.backbase.com/backbase-docker-releases/engage-defaults-retail:2022.10-BETA
+#    container_name: engage-defaults
+#    volumes:
+#      - ./scripts:/tmp/h
+#    profiles:
+#      - engagement-2
+#    ports:
+#      - "8709:8080"
+#    environment:
+#      <<: [ *common-variables, *database-variables ]
+#      TARGET_URL: http://localhost:7777/api/provisioning
+#      AUTH_URL: http://localhost:8180/auth/login
+#      IMPORT_USERNAME: ramesh
+#      IMPORT_PASSWORD: ramesh
+#      #FOLDERS_TO_SCAN: init,upgrade
+#      FAIL_FAST: "false"
+#      PROVISION_WITH_IDENTITY: "false"
+#      server.port: 8080
+#      spring.datasource.url: jdbc:mysql://mysql:3306/engage_defaults?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+#
+#  provisioner:
+#    container_name: provisioner
+#    image: repo.backbase.com/backbase-docker-releases/provisioner:2023.09-LTS
+#    volumes:
+#      - ./scripts:/tmp/h
+#    environment:
+#      TARGET_URL: http://localhost:7777/api/provisioning
+#      AUTH_URL: http://localhost:8180/auth/login
+#      IMPORT_USERNAME: ramesh
+#      IMPORT_PASSWORD: ramesh
+#      #FOLDERS_TO_SCAN: init,upgrade
+#      FAIL_FAST: 'false'
+#      PROVISION_WITH_IDENTITY: 'false'
+#      spring.datasource.url: jdbc:mysql://mysql:3306/provisioner?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+#    network_mode: "host"
+#    profiles:
+#      - engagement-3
+#    depends_on:
+#      engage-defaults:
+#        condition: service_completed_successfully
+
+  user-segment:
+    container_name: user-segment
+    image: repo.backbase.com/backbase-docker-releases/user-segment:2023.09-LTS
+    ports:
+      - "9911:8080"
+    profiles:
+      - engagement-4
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8080
+      spring.datasource.url: jdbc:mysql://mysql:3306/user_segment?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+
+  user-segments-collector:
+    container_name: user-segments-collector
+    image: repo.backbase.com/backbase-docker-releases/user-segments-collector:2023.09-LTS
+    ports:
+      - "9912:8080"
+    profiles:
+      - engagement-4
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8080
+      spring.datasource.url: jdbc:mysql://mysql:3306/user_segment_collector?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+
+
+
+  engage-web-app:
+    image: repo.backbase.com/backbase-docker-releases/engage-web-app:2023.09-LTS
+    container_name: engage-web-app
+    profiles:
+      - engagement-web
+    ports:
+      - "4400:4400"
+    environment:
+      <<: [ *common-variables ]
+      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
+      PORT: 4400
+      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+      API_ROOT: http://localhost:7777/api
+      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+      AUTH_URL: http://localhost:8180/auth
+      AUTH_REALM: backbase
+      AUTH_CLIENT_ID: bb-web-client
+
+  accessgroup-integration-service:
+    container_name: accessgroup-integration-service
+    profiles:
+      - iam
+    image: repo.backbase.com/backbase-docker-releases/accessgroup-integration-service:${BB_VERSION}
+    ports:
+      - "8041:8041"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *integration-service-variables ]
+      server.port: 8041
+      backbase.security.public.paths: /**
+      backbase.data-group.types: "ARRANGEMENTS,CONTACTS,CUSTOMERS,REPOSITORIES"
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/accessgroup-integration-service", "<status>UP</status>" ]
+
 
   access-control:
     image: repo.backbase.com/backbase-docker-releases/access-control:${BB_VERSION}
@@ -430,6 +396,8 @@ services:
       LOGGING_LEVEL_COM_BACKBASE: DEBUG
       logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
       backbase.data-group.types: "ARRANGEMENTS,CONTACTS,CUSTOMERS,REPOSITORIES"
+      backbase.contentservices.accesscontrol.enabled: true
+
     volumes:
       - ./scripts:/tmp/h
     healthcheck:
@@ -442,22 +410,6 @@ services:
       - activemq
       - registry
 
-  push-integration-service:
-    container_name: push-integration-service
-    image: repo.backbase.com/backbase-docker-releases/push-integration-service:${BB_VERSION}
-    ports:
-      - "8503:8503"
-    profiles:
-      - ext
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      spring.datasource.url: jdbc:mysql://mysql:3306/push-integration-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-      backbase.web.security.enabled: true
-      backbase.mobile.ios.isProduction: false
-      backbase.mobile.ios.topic: "com.backbase.poc.pushnotifications"
-      backbase.mobile.android.url: "https://fcm.googleapis.com/fcm/send"
-      backbase.mobile.android.key: "License key should be here"
-      server.port: 8503
 
   audit-service:
     container_name: audit-service
@@ -513,6 +465,9 @@ services:
       backbase.security.public.paths: /**
       logging.level.com.backbase: DEBUG
       spring.cloud.discovery.client.simple.instances.user-integration-outbound-service[0].uri: http://wiremock:8080
+      #https://backbase.io/developers/documentation/identity-access-management/2023.10/user-management/services/user-management-reference/#user-manager-properties
+      #https://backbase.io/developers/documentation/identity-access-management/2023.10/user-management/services/user-management-configure-user-manager/
+      #user-outbound-integration-service (not provided, custom component)
     volumes:
       - ./scripts:/tmp/h
     healthcheck:
@@ -609,7 +564,7 @@ services:
       <<: *healthcheck-defaults
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/approvalintegrationservice", "<status>UP</status>" ]
 
-  limit:
+  limit-service:
     container_name: limit-service
     image: repo.backbase.com/backbase-docker-releases/limit:2023.09-LTS
     ports:
@@ -679,29 +634,29 @@ services:
     volumes:
       - ./stubs:/home/wiremock
 
-  postman-health-check:
-    image: postman/newman
-    platform: linux/amd64
-    profiles:
-      - foundation
-    command:
-      run /etc/newman/postman_collection.json --environment="/etc/newman/postman_environment.json"
-    volumes:
-      - ../../test/postman/HealthCheck_Local-Backend-Environment.postman_collection.json:/etc/newman/postman_collection.json
-      - ../../test/postman/Docker-Backend-Environment.postman_environment.json:/etc/newman/postman_environment.json
-    depends_on:
-      access-control:
-        condition: service_healthy
-      arrangement-manager:
-        condition: service_healthy
-      backbase-identity:
-        condition: service_healthy
-      identity-integration-service:
-        condition: service_healthy
-      token-converter:
-        condition: service_healthy
-      user-manager:
-        condition: service_healthy
+#  postman-health-check:
+#    image: postman/newman
+#    platform: linux/amd64
+#    profiles:
+#      - iam
+#    command:
+#      run /etc/newman/postman_collection.json --environment="/etc/newman/postman_environment.json"
+#    volumes:
+#      - ../../test/postman/HealthCheck_Local-Backend-Environment.postman_collection.json:/etc/newman/postman_collection.json
+#      - ../../test/postman/Docker-Backend-Environment.postman_environment.json:/etc/newman/postman_environment.json
+#    depends_on:
+#      access-control:
+#        condition: service_healthy
+#      arrangement-manager:
+#        condition: service_healthy
+#      backbase-identity:
+#        condition: service_healthy
+#      identity-integration-service:
+#        condition: service_healthy
+#      token-converter:
+#        condition: service_healthy
+#      user-manager:
+#        condition: service_healthy
 
   # <EXAMPLE-SERVICE-NAME>:
   #   image: <DOCKER-REGISTRY>/<REPOSITORY-NAME>:<TAG>
@@ -717,6 +672,41 @@ services:
   #     test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/<EXAMPLE-SERVICE-NAME>", "<status>UP</status>" ]
   #   links:
   #     - registry
+
+  push-integration-service:
+    container_name: push-integration-service
+    image: repo.backbase.com/backbase-docker-releases/push-integration-service:${BB_VERSION}
+    ports:
+      - "8503:8503"
+    profiles:
+      - ext
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/push-integration-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      backbase.web.security.enabled: true
+      backbase.mobile.ios.isProduction: false
+      backbase.mobile.ios.topic: "com.backbase.poc.pushnotifications"
+      backbase.mobile.android.url: "https://fcm.googleapis.com/fcm/send"
+      backbase.mobile.android.key: "License key should be here"
+      server.port: 8503
+
+  remote-config:
+    container_name: remote-config
+    image: repo.backbase.com/backbase-docker-releases/remote-config:${BB_VERSION}
+    profiles:
+      - ext
+    ports:
+      - "9995:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/remote-config?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+    healthcheck:
+      <<: *healthcheck-defaults
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/remote-config", "<status>UP</status>" ]
+
 
   fido-service:
     container_name: fido-service
@@ -748,7 +738,6 @@ services:
     volumes:
       - ./scripts:/tmp/h
 
-
   confirmation:
     container_name: confirmation
     image: repo.backbase.com/backbase-docker-releases/confirmation:${BB_VERSION}
@@ -762,7 +751,6 @@ services:
       server.port: 8181
     volumes:
       - ./scripts:/tmp/h
-
 
   notifications-service:
     container_name: notifications-service
@@ -826,25 +814,6 @@ services:
       test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/user-profile-core-mock", "<status>UP</status>" ]
 
 
-  #  user-outbound-integration-service:
-  #    container_name: user-outbound-integration-service
-  #    profiles:
-  #      - iam
-  #      - access-control
-  #      - ocb
-  #    image: 459208928199.dkr.ecr.us-west-2.amazonaws.com/development/user-outbound-integration-service:1.0.0-SNAPSHOT
-  #    ports:
-  #      - "8044:8044"
-  #    environment:
-  #      <<: [ *common-variables, *message-broker-variables ]
-  #      server.port: 8044
-  #
-  #    volumes:
-  #      - ./scripts:/tmp/h
-  #    healthcheck:
-  #      <<: *healthcheck-defaults
-  #      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://registry:8080/eureka/apps/user-outbound-integration-service", "<status>UP</status>" ]
-
   employee:
     container_name: employee
     image: repo.backbase.com/backbase-docker-releases/employee:${BB_VERSION}
@@ -866,39 +835,13 @@ services:
     environment:
       <<: [ *common-variables, *message-broker-variables ]
       server.port: 8080
+      spring.datasource.url: jdbc:mysql://mysql:3306/employee_actions?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
     profiles:
       - iam
     volumes:
       - ./scripts:/tmp/h
 
-  engagement:
-    container_name: engagement
-    image: repo.backbase.com/backbase-docker-releases/engagement:${BB_VERSION}
-    ports:
-      - "8320:8320"
-    profiles:
-      - engagement
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      server.port: 8320
-      IS_APPROVALS: true
-      #Set up this: https://backbase.io/developers/documentation/digital-engage/2023.09-LTS/system-reference/engage-services-permissions/
-      spring.datasource.url: jdbc:mysql://mysql:3306/engagement?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
-    volumes:
-      - ./scripts:/tmp/h
 
-  communication:
-    container_name: communications
-    image: repo.backbase.com/backbase-docker-releases/communication:${BB_VERSION}
-    ports:
-      - '9972:9972'
-    profiles:
-      - banking-services
-    environment:
-      <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      server.port: 9972
-    volumes:
-      - ./scripts:/tmp/h
 
   web-authentication:
     container_name: web-authentication-service
@@ -912,7 +855,6 @@ services:
       eureka.client.enabled: 'true'
       spring.datasource.url: jdbc:mysql://mysql:3306/web_authentication?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
       server.port: 9971
-      spring.config.additional-location: file:/tmp/application.yaml
     volumes:
       - ./scripts:/tmp/h
 
@@ -949,44 +891,102 @@ services:
       # Path to API root for backend services --e.g: /api or my.web.domain.com/api
       API_ROOT: http://localhost:7777/api
       # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth
+      AUTH_URL: http://localhost:8180/auth/
       AUTH_REALM: backbase
+      BASE_HREF: /
 
-  engage-web-app:
-    image: repo.backbase.com/backbase-docker-releases/engage-web-app:2023.09-LTS
-    container_name: engage-web-app
-    profiles:
-      - engagement
-    ports:
-      - "4400:4400"
-    environment:
-      <<: [ *common-variables ]
-      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
-      PORT: 4400
-      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://localhost:7777/api
-      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth
-      AUTH_REALM: backbase
-      AUTH_CLIENT_ID: bb-web-client
 
-  remote-config-web-app:
-    image: repo.backbase.com/backbase-docker-releases/remote-config-web-app:2023.09-LTS
-    container_name: remote-config-web-app
+  #  remote-config-web-app:
+  #    image: repo.backbase.com/backbase-docker-releases/remote-config-web-app:2023.09-LTS
+  #    container_name: remote-config-web-app
+  #    profiles:
+  #      - web
+  #    ports:
+  #      - "4500:4500"
+  #    environment:
+  #      <<: [ *common-variables ]
+  #      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
+  #      PORT: 4500
+  #      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
+  #      API_ROOT: http://localhost:7777/api
+  #      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
+  #      AUTH_URL: http://localhost:8180/auth/
+  #      AUTH_REALM: backbase
+  #      AUTH_CLIENT_ID: bb-web-client
+  #      BASE_HREF: /
+
+
+##########################################################################################################
+
+  personal-loans-service:
+    container_name: personal-loans-service
+    image: repo.backbase.com/backbase-docker-releases/personal-loans-service:2023.09-LTS-digital-sales
     profiles:
-      - engagement
+      - banking-services
     ports:
-      - "4500:4500"
+      - "9994:8080"
     environment:
-      <<: [ *common-variables ]
-      # The port that the app is hosted on --e.g: 8080. Note that 0-1024 ports are for privileged access
-      PORT: 4500
-      # Path to API root for backend services --e.g: /api or my.web.domain.com/api
-      API_ROOT: http://localhost:7777/api
-      # Path to the authentication service endpoint --e.g: /auth or identity.server/auth
-      AUTH_URL: http://localhost:8180/auth
-      AUTH_REALM: backbase
-      AUTH_CLIENT_ID: bb-web-client
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/personal-loans-service?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+
+  card-manager:
+    container_name: card-manager
+    image: repo.backbase.com/backbase-docker-releases/card-manager:${BB_VERSION}
+    profiles:
+      - banking-services
+    ports:
+      - "9993:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/card-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+
+  enrollment-manager:
+    container_name: enrollment-manager
+    image: repo.backbase.com/backbase-docker-releases/enrollment-manager:${BB_VERSION}
+    profiles:
+      - banking-services
+    ports:
+      - "9992:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      spring.datasource.url: jdbc:mysql://mysql:3306/enrollment-manager?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+
+  enrollment-support-service-mock:
+    profiles:
+      - banking-services
+    container_name: enrollment-support-service-mock
+    image: repo.backbase.com/backbase-docker-releases/enrollment-support-service-mock:${BB_VERSION}
+    ports:
+      - "9991:8080"
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 8080
+    volumes:
+      - ./scripts:/tmp/h
+
+
+  communication:
+    container_name: communications
+    image: repo.backbase.com/backbase-docker-releases/communication:${BB_VERSION}
+    ports:
+      - '9972:9972'
+    profiles:
+      - banking-services
+    environment:
+      <<: [ *common-variables, *message-broker-variables, *database-variables ]
+      server.port: 9972
+    volumes:
+      - ./scripts:/tmp/h
+
 
   account-statement:
     container_name: account-statement
@@ -1345,3 +1345,44 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+#
+#
+#
+#
+#      "BACKBASE_AUTHENTICATORS_CHANNELS_SMS": "true"
+#      "BACKBASE_AUTHENTICATORS_CHANNELS_EMAIL": "true"
+#      "SIG_SECRET_KEY":
+#      "BACKBASE-ENV-JWT":
+#      "USERCTX_KEY":
+#      "EXTERNAL_ENC_SECRET_KEY":
+#      "DEBUG" : "true"
+#      QUARKUS_HTTP_CORS: "false"
+#
+#      KEYCLOAK_ADMIN: "admin"
+#      KEYCLOAK_ADMIN_PASSWORD: "admin"
+#
+#      #      KC_DB_URL: "jdbc:mysql://mysql:3306/backbase_identity?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true"
+#      #      KC_DB_USERNAME: "root"
+#      #      KC_DB_PASSWORD: "root"
+#
+#      QUARKUS_DATASOURCE_DRIVER: "oracle.jdbc.OracleDriver"
+#      QUARKUS_LOG_LEVEL: "DEBUG"
+#      QUARKUS_DATASOURCE_URL: "jdbc:oracle:thin:@10.160.23.2:1521/dev2"
+#      QUARKUS_DATASOURCE_USERNAME: "app_backbase_identity"
+#      QUARKUS_DATASOURCE_PASSWORD: admin
+#      KC_LOG_LEVEL: "DEBUG"
+#      KC_LOG_CONSOLE_FORMAT: "%d{yyy:MM:dd HH:mm:ss.SSS} %-5p [%X{traceId},%X{spanId},%X{sampled}] %i --- [%t] %c{2.} : %m%n"
+#      #"keycloak.hostname.default.frontendUrl": "https://business-id-dev2.abbank.vn/auth"
+#      KC_HOSTNAME_URL: "http://localhost:8180/auth/"
+#      KC_SPI_SERVICE_TOKEN_DEFAULT_URL: "http://token-converter:8080"
+#      KC_SPI_USER_MANAGER_CLIENT_DEFAULT_URL: "http://user-manager:8080"
+#      KC_SPI_CONNECTIONS_JPA_LEGACY_INITIALIZE_EMPTY: "true"
+#      KC_SPI_CONNECTIONS_JPA_LEGACY_MIGRATION_STRATEGY: "update"
+#      KEYCLOAK_BACKBASE_EVENT_LISTENERS_AUDIT_INTEGRATIONSERVICEURL: "http://audit-service:8500/"
+#      KEYCLOAK_BACKBASE_DEVICE_URL: "http://device-management-service:8182/"
+#      KEYCLOAK_BACKBASE_FIDO_URL: "http://fido-service:8183/"
+#      keycloak.backbase.web-authentication.url: http://web-authentication:9971
+#      BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_0_ISSUERHOST: localhost
+#      BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_1_ISSUERHOST: 10.0.3.105
+#      JAVA_TOOL_OPTIONS: "-Dquarkus.log.category.'\"com.backbase\"'.level=DEBUG \
+#                          -Dquarkus.log.category.'\"org.keycloak.protocol.oidc\"'.level=TRACE"
