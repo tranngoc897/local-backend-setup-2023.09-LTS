@@ -1,6 +1,5 @@
-ARG IDENTITY_BUILDER
+FROM repo.backbase.com/backbase-docker-releases/auth-server-builder:2023.09-LTS as auth-server-builder
 
-FROM $IDENTITY_BUILDER as auth-server-builder
 
 # In this first build-stage we are configuring build-time settings and including project-specific artifacts
 # (such as custom themes and authenticators) that are all input to the Quarkus build optimisation phase.
@@ -12,7 +11,7 @@ FROM $IDENTITY_BUILDER as auth-server-builder
 #  - https://www.keycloak.org/server/all-config
 #  - https://quarkus.io/guides/all-config
 
-ENV KC_DB "mysql"
+ENV KC_DB "oracle"
 ENV KC_TRANSACTION_XA_ENABLED "true"
 ENV KC_HEALTH_ENABLED "true"
 ENV KC_METRICS_ENABLED "false"
@@ -27,6 +26,8 @@ ENV KC_METRICS_ENABLED "false"
 # Include custom realm configuration JSON files in `${kc.home.dir}/data/import/`.  These files will be imported once on first run of
 # Auth Server.
 COPY realms/* /opt/keycloak/data/import/
+#COPY custom-authenticators-jar-with-dependencies.jar /opt/keycloak/providers/custom-authenticators.jar
+#COPY identity-themes.jar /opt/keycloak/providers/
 
 ENV JDK_JAVA_OPTIONS "-XX:+UseG1GC -XX:+AlwaysPreTouch -Dkc.home.dir=/opt/keycloak -Djboss.server.config.dir=/opt/keycloak/conf"
 RUN ["java", "-cp", "/opt/keycloak/lib/quarkus-run.jar:/opt/keycloak/lib/bootstrap/*",\
