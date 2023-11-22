@@ -163,8 +163,8 @@ services:
       QUARKUS_HTTP_CORS: "false"
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
-      KC_DB_URL: "jdbc:oracle:thin:@10.160.22.8:1521/devret1?useSSL=false"
-      KC_DB_USERNAME: "APP_BACKBASE_IDENTITY_KC"
+      KC_DB_URL: "jdbc:oracle:thin:@10.160.22.8:1521:devret1?useSSL=false"
+      KC_DB_USERNAME: "APP_BACKBASE_IDENTITY"
       KC_DB_PASSWORD: "n9cwEYreDK"
       KC_HOSTNAME_URL: "http://localhost:8180/auth/"
       KC_SPI_CONNECTIONS_JPA_LEGACY_INITIALIZE_EMPTY: "true"
@@ -177,8 +177,10 @@ services:
       KEYCLOAK_BACKBASE_DEVICE_URL: "http://device-management-service:8182/"
       KEYCLOAK_BACKBASE_FIDO_URL: "http://fido-service:8183/"
       KEYCLOAK.BACKBASE.WEB-AUTHENTICATION.URL: http://web-authentication:9971
+
       BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_0_ISSUERHOST: localhost
       BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_1_ISSUERHOST: 10.0.3.105
+
       JAVA_TOOL_OPTIONS: "-Dquarkus.log.category.'\"com.backbase\"'.level=DEBUG -Dquarkus.log.category.'\"org.keycloak.protocol.oidc\"'.level=TRACE"
     volumes:
       - ./scripts:/tmp/h2
@@ -386,9 +388,8 @@ services:
       - iam
     environment:
       <<: [ *common-variables, *message-broker-variables, *database-variables ]
-      #spring.datasource.url: jdbc:oracle:thin:@10.160.22.8:1521/app_accesscontrol?useSSL=false
       spring.datasource.url: jdbc:oracle:thin:@10.160.22.8:1521/devret1?useSSL=false
-      spring.datasource.username: app_access_control
+      spring.datasource.username: app_accesscontrol
       spring.datasource.password: n9cwEYreDK
       spring.liquibase.enabled: true
       LOGGING_LEVEL_COM_BACKBASE: DEBUG
