@@ -1,4 +1,4 @@
-FROM repo.backbase.com/backbase-docker-releases/auth-server-builder:2023.09-LTS as auth-server-builder
+FROM repo.backbase.com/backbase-docker-releases/auth-server-builder:2023.09.5-LTS as auth-server-builder
 
 
 # In this first build-stage we are configuring build-time settings and including project-specific artifacts

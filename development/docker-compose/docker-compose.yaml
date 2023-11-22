@@ -154,42 +154,37 @@ services:
       - backbase-identity
 
   backbase-identity:
-    image: auth-server:${BB_VERSION}
+    image: docker-oc-devops.abbank.vn/repository/abbank/dev2/auth-server-builder:2023_Oracle
     profiles:
       - iam-f
-    build:
-      context: ../images/auth-server
-      args:
-        IDENTITY_BUILDER: repo.backbase.com/backbase-docker-releases/auth-server-builder:${BB_VERSION}
     ports:
       - '8180:8080'
     environment:
       QUARKUS_HTTP_CORS: "false"
       KEYCLOAK_ADMIN: "admin"
       KEYCLOAK_ADMIN_PASSWORD: "admin"
-      KC_DB_URL: "jdbc:mysql://mysql:3306/backbase_identity?useSSL=false&allowPublicKeyRetrieval=true&cacheServerConfiguration=true&createDatabaseIfNotExist=true"
-      KC_DB_USERNAME: "root"
-      KC_DB_PASSWORD: "root"
-      KC_LOG_LEVEL: "DEBUG"
-      KC_LOG_CONSOLE_FORMAT: "%d{yyy:MM:dd HH:mm:ss.SSS} %-5p [%X{traceId},%X{spanId},%X{sampled}] %i --- [%t] %c{2.} : %m%n"
+      KC_DB_URL: "jdbc:oracle:thin:@10.160.22.8:1521/devret1?useSSL=false"
+      KC_DB_USERNAME: "APP_BACKBASE_IDENTITY_KC"
+      KC_DB_PASSWORD: "n9cwEYreDK"
       KC_HOSTNAME_URL: "http://localhost:8180/auth/"
-      KC_SPI_SERVICE_TOKEN_DEFAULT_URL: "http://token-converter:8080"
-      KC_SPI_USER_MANAGER_CLIENT_DEFAULT_URL: "http://user-manager:8080"
       KC_SPI_CONNECTIONS_JPA_LEGACY_INITIALIZE_EMPTY: "true"
       KC_SPI_CONNECTIONS_JPA_LEGACY_MIGRATION_STRATEGY: "update"
+      KC_LOG_LEVEL: "DEBUG"
+      KC_LOG_CONSOLE_FORMAT: "%d{yyy:MM:dd HH:mm:ss.SSS} %-5p [%X{traceId},%X{spanId},%X{sampled}] %i --- [%t] %c{2.} : %m%n"
+      KC_SPI_SERVICE_TOKEN_DEFAULT_URL: "http://token-converter:8080"
+      KC_SPI_USER_MANAGER_CLIENT_DEFAULT_URL: "http://user-manager:8080"
       KEYCLOAK_BACKBASE_EVENT_LISTENERS_AUDIT_INTEGRATIONSERVICEURL: "http://audit-service:8500/"
       KEYCLOAK_BACKBASE_DEVICE_URL: "http://device-management-service:8182/"
       KEYCLOAK_BACKBASE_FIDO_URL: "http://fido-service:8183/"
-      keycloak.backbase.web-authentication.url: http://web-authentication:9971
+      KEYCLOAK.BACKBASE.WEB-AUTHENTICATION.URL: http://web-authentication:9971
       BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_0_ISSUERHOST: localhost
       BACKBASE_OIDCTOKENCONVERTER_WHITELISTEDDOMAINS_1_ISSUERHOST: 10.0.3.105
-      JAVA_TOOL_OPTIONS: "-Dquarkus.log.category.'\"com.backbase\"'.level=DEBUG \
-                          -Dquarkus.log.category.'\"org.keycloak.protocol.oidc\"'.level=TRACE"
+      JAVA_TOOL_OPTIONS: "-Dquarkus.log.category.'\"com.backbase\"'.level=DEBUG -Dquarkus.log.category.'\"org.keycloak.protocol.oidc\"'.level=TRACE"
     volumes:
-      - ./scripts:/tmp/h
+      - ./scripts:/tmp/h2
     healthcheck:
       <<: *healthcheck-defaults
-      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://localhost:8080/auth/realms/backbase/.well-known/openid-configuration", "backbase" ]
+      test: [ "CMD", "java", "/tmp/h/HealthCheck.java", "http://localhost:8180/auth/realms/backbase/.well-known/openid-configuration", "backbase" ]
     depends_on:
       mysql:
         condition: service_healthy
