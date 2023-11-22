@@ -391,7 +391,6 @@ services:
       spring.datasource.url: jdbc:oracle:thin:@10.160.22.8:1521/devret1?useSSL=false
       spring.datasource.username: app_accesscontrol
       spring.datasource.password: n9cwEYreDK
-      spring.liquibase.enabled: true
       LOGGING_LEVEL_COM_BACKBASE: DEBUG
       logging.level.org.springframework.web.filter.CommonsRequestLoggingFilter: DEBUG
       backbase.data-group.types: "ARRANGEMENTS,CONTACTS,CUSTOMERS,REPOSITORIES"
@@ -615,7 +614,7 @@ services:
   legal-entity-bootstrap-task:
     image: repo.backbase.com/backbase-stream-images/legal-entity-bootstrap-task:${STREAM_VERSION}
     profiles:
-      - bootstrap2
+      - bootstrap
     environment:
       <<: *common-variables
       spring.config.additional-location: file:/tmp/ingestion.yml
@@ -632,10 +631,7 @@ services:
         condition: service_healthy
       identity-integration-service:
         condition: service_healthy
-      backbase-identity:
-        condition: service_healthy
-      product-catalog-task:
-        condition: service_completed_successfully
+
 
   wiremock:
     image: wiremock/wiremock:2.32.0
